@@ -1,0 +1,83 @@
+1  PROJECT_ID=$(gcloud config get-value core/project)
+    2  REGION=us-central1
+    3  echo $PROJECT_ID
+    4  echo $REGION
+    5  gcloud services enable run.googleapis.com cloudbuild.googleapis.com
+    6  unzip -q hello-google.zip
+    7  cd hello-google
+    8  pwd
+    9  ls
+   10  echo $PROJECT_ID
+   11  echo $REGION
+   12  gcloud builds submit --tag gcr.io/$PROJECT_ID/hello-google:v1
+   13  gcloud run deploy hello-google --port 8000 --region $REGION   --image gcr.io/$PROJECT_ID/hello-google:v1   --allow-unauthenticated
+   14  echo $USER
+   15  REGION=us-central1
+   16  echo $REGION
+   17  PGSERVER=workshop3-postgres
+   18  echo $PGSERVER
+   19  DBNAME=nc_tutorials_db
+   20  echo $DBNAME
+   21  REPO=workshop3-repo
+   22  echo $REPO
+   23  IMAGE=workshop3
+   24  echo $IMAGE
+   25  PROJECT_ID=$(gcloud config get-value project)
+   26  echo $PROJECT_ID
+   27  PROJECT_NUM=$(gcloud projects describe $PROJECT_ID --format 'value(projectNumber)')
+   28  echo $PROJECT_NUM
+   29  gcloud services enable   run.googleapis.com   sql-component.googleapis.com   sqladmin.googleapis.com   compute.googleapis.com   cloudbuild.googleapis.com   secretmanager.googleapis.com   artifactregistry.googleapis.com
+   30  gcloud sql instances create $PGSERVER   --project $PROJECT_ID   --database-version POSTGRES_13   --tier db-f1-micro   --region $REGION
+   31  gcloud sql databases create $DBNAME --instance $PGSERVER
+   32  PGPASS="$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 30 | head -n 1)"
+   33  echo $PGPASS
+   34  gcloud sql users create pguser --instance $PGSERVER --password $PGPASS
+   35  gcloud sql users list -i $PGSERVER
+   36  CLOUDBUILD=${PROJECT_NUM}@cloudbuild.gserviceaccount.com
+   37  echo $CLOUDBUILD
+   38  gcloud projects add-iam-policy-binding $PROJECT_ID     --member serviceAccount:${CLOUDBUILD}     --role roles/cloudsql.client
+   39  GS_BUCKET_NAME=${PROJECT_ID}-storage
+   40  gsutil mb -l us-central1 gs://${GS_BUCKET_NAME}
+   41  echo $PROJECT_ID
+   42  echo REGION
+   43  echo $REGION
+   44  echo $PGSERVER
+   45  echo $DBNAME
+   46  echo $GS_BUCKET_NAME
+   47  echo DATABASE_URL=\"postgres://pguser:${PGPASS}@//cloudsql/${PROJECT_ID}:${REGION}:${PGSERVER}/${DBNAME}\" > .env
+   48  echo GS_BUCKET_NAME=\"${GS_BUCKET_NAME}\" >> .env
+   49  echo SECRET_KEY=\"$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 50 | head -n 1)\" >> .env
+   50  echo DEBUG=\"True\" >> .env
+   51  cat .env
+   52  gcloud secrets create application_settings --data-file .env
+   53  CLOUDRUN=${PROJECT_NUM}-compute@developer.gserviceaccount.com
+   54  echo $CLOUDRUN
+   55  echo $CLOUDBUILD
+   56  gcloud secrets add-iam-policy-binding application_settings   --member serviceAccount:${CLOUDRUN}   --role roles/secretmanager.secretAccessor
+   57  gcloud secrets add-iam-policy-binding application_settings   --member serviceAccount:${CLOUDBUILD}   --role roles/secretmanager.secretAccessor
+   58  unzip -q workshop3.zip 
+   59  ls
+   60  rm workshop3.zip
+   61  ls
+   62  cd workshop3/
+   63  ls
+   64  pwd
+   65  touch Dockerfile
+   66  cloudshell edit Dockerfile
+   67  cat Dockerfile
+   68  gcloud artifacts repositories create $REPO: --location $REGION --repository-format docker
+   69  gcloud artifacts repositories create $REPO --location $REGION --repository-format docker
+   70  gcloud artifacts repositories list
+   71  IMAGE_LOCATION=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}
+   72  echo $IMAGE_LOCATION
+   73  pwd
+   74  ls
+   75  gcloud builds submit --tag ${IMAGE_LOCATION}
+   76  SQL_SERVER=${PROJECT_ID}:${REGION}:${PGSERVER}
+   77  echo $SQL_SERVER
+   78  touch cloudmigrate.yml
+   79  cloudshell edit cloudmigrate.yml 
+   80  gcloud builds submit --config cloudmigrate.yml   --substitutions _IMAGE_LOCATION=$IMAGE_LOCATION,_SQL_SERVER=$SQL_SERVER
+   81  gcloud run deploy $IMAGE   --platform managed   --region $REGION   --image $IMAGE_LOCATION   --set-cloudsql-instances $SQL_SERVER   --allow-unauthenticated
+   82  cloudshell edit Dockerfile 
+   83  history

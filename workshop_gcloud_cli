@@ -1,0 +1,633 @@
+
+
+Welcome to Cloud Shell! Type "help" to get started.
+Your Cloud Platform project in this session is set to week3-workshop-392213.
+Use “gcloud config set project [PROJECT_ID]” to change to a different project.
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $USER
+ezhilpandiyan_saka
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ REGION=us-central1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $REGION
+us-central1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ PGSERVER=workshop3-postgres
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PGSERVER
+workshop3-postgres
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ DBNAME=nc_tutorials_db
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $DBNAME
+nc_tutorials_db
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ REPO=workshop3-repo
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $REPO
+workshop3-repo
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ IMAGE=workshop3
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $IMAGE
+workshop3
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ PROJECT_ID=$(gcloud config get-value project)
+Your active configuration is: [cloudshell-24691]
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PROJECT_ID
+week3-workshop-392213
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ PROJECT_NUM=$(gcloud projects describe $PROJECT_ID --format 'value(projectNumber)')
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PROJECT_NUM
+15752031030
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud services enable \
+  run.googleapis.com \
+  sql-component.googleapis.com \
+  sqladmin.googleapis.com \
+  compute.googleapis.com \
+  cloudbuild.googleapis.com \
+  secretmanager.googleapis.com \
+  artifactregistry.googleapis.com
+Operation "operations/acf.p2-15752031030-09268714-e897-4e09-8f8c-488ed44122fa" finished successfully.
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud sql instances create $PGSERVER \
+  --project $PROJECT_ID \
+  --database-version POSTGRES_13 \
+  --tier db-f1-micro \
+  --region $REGION
+Creating Cloud SQL instance for POSTGRES_13...done.                                                                                                                                                                                             
+Created [https://sqladmin.googleapis.com/sql/v1beta4/projects/week3-workshop-392213/instances/workshop3-postgres].
+NAME: workshop3-postgres
+DATABASE_VERSION: POSTGRES_13
+LOCATION: us-central1-a
+TIER: db-f1-micro
+PRIMARY_ADDRESS: 34.70.82.240
+PRIVATE_ADDRESS: -
+STATUS: RUNNABLE
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud sql databases create $DBNAME --instance $PGSERVER
+Creating Cloud SQL database...done.                                                                                                                                                                                                             
+Created database [nc_tutorials_db].
+instance: workshop3-postgres
+name: nc_tutorials_db
+project: week3-workshop-392213
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ PGPASS="$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 30 | head -n 1)"
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PGPASS
+Sigge2f4NQVeMgHjnaYsPj3f4I2O6D
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud sql users create pguser --instance $PGSERVER --password $PGPASS
+Creating Cloud SQL user...done.                                                                                                                                                                                                                 
+Created user [pguser].
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud sql users list -i $PGSERVER
+NAME: pguser
+HOST: 
+TYPE: BUILT_IN
+PASSWORD_POLICY: 
+
+NAME: postgres
+HOST: 
+TYPE: BUILT_IN
+PASSWORD_POLICY: 
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ CLOUDBUILD=${PROJECT_NUM}@cloudbuild.gserviceaccount.com
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $CLOUDBUILD
+15752031030@cloudbuild.gserviceaccount.com
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member serviceAccount:${CLOUDBUILD} \
+    --role roles/cloudsql.client
+Updated IAM policy for project [week3-workshop-392213].
+bindings:
+- members:
+  - serviceAccount:15752031030@cloudbuild.gserviceaccount.com
+  role: roles/cloudbuild.builds.builder
+- members:
+  - serviceAccount:service-15752031030@gcp-sa-cloudbuild.iam.gserviceaccount.com
+  role: roles/cloudbuild.serviceAgent
+- members:
+  - serviceAccount:15752031030@cloudbuild.gserviceaccount.com
+  role: roles/cloudsql.client
+- members:
+  - serviceAccount:service-15752031030@compute-system.iam.gserviceaccount.com
+  role: roles/compute.serviceAgent
+- members:
+  - serviceAccount:service-15752031030@containerregistry.iam.gserviceaccount.com
+  role: roles/containerregistry.ServiceAgent
+- members:
+  - serviceAccount:15752031030-compute@developer.gserviceaccount.com
+  - serviceAccount:15752031030@cloudservices.gserviceaccount.com
+  role: roles/editor
+- members:
+  - user:ezhilpandiyan.saka@gmail.com
+  role: roles/owner
+- members:
+  - serviceAccount:service-15752031030@gcp-sa-pubsub.iam.gserviceaccount.com
+  role: roles/pubsub.serviceAgent
+- members:
+  - serviceAccount:service-15752031030@serverless-robot-prod.iam.gserviceaccount.com
+  role: roles/run.serviceAgent
+etag: BwX_-qVmNE4=
+version: 1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ GS_BUCKET_NAME=${PROJECT_ID}-storage
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gsutil mb -l us-central1 gs://${GS_BUCKET_NAME}
+Creating gs://week3-workshop-392213-storage/...
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PROJECT_ID
+week3-workshop-392213
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo REGION
+REGION
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $REGION
+us-central1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $PGSERVER
+workshop3-postgres
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $DBNAME
+nc_tutorials_db
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $GS_BUCKET_NAME
+week3-workshop-392213-storage
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo DATABASE_URL=\"postgres://pguser:${PGPASS}@//cloudsql/${PROJECT_ID}:${REGION}:${PGSERVER}/${DBNAME}\" > .env
+echo GS_BUCKET_NAME=\"${GS_BUCKET_NAME}\" >> .env
+echo SECRET_KEY=\"$(cat /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | fold -w 50 | head -n 1)\" >> .env
+echo DEBUG=\"True\" >> .env
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ cat .env
+DATABASE_URL="postgres://pguser:Sigge2f4NQVeMgHjnaYsPj3f4I2O6D@//cloudsql/week3-workshop-392213:us-central1:workshop3-postgres/nc_tutorials_db"
+GS_BUCKET_NAME="week3-workshop-392213-storage"
+SECRET_KEY="Xp7lFfQLnkrATj2K0EHAkehqAwnO6BhtPmXUdo6KomXlksWGgz"
+DEBUG="True"
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud secrets create application_settings --data-file .env
+Created version [1] of the secret [application_settings].
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ CLOUDRUN=${PROJECT_NUM}-compute@developer.gserviceaccount.com
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $CLOUDRUN
+15752031030-compute@developer.gserviceaccount.com
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ echo $CLOUDBUILD
+15752031030@cloudbuild.gserviceaccount.com
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud secrets add-iam-policy-binding application_settings \
+  --member serviceAccount:${CLOUDRUN} \
+  --role roles/secretmanager.secretAccessor
+Updated IAM policy for secret [application_settings].
+bindings:
+- members:
+  - serviceAccount:15752031030-compute@developer.gserviceaccount.com
+  role: roles/secretmanager.secretAccessor
+etag: BwX_-sGnEnk=
+version: 1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ gcloud secrets add-iam-policy-binding application_settings \
+  --member serviceAccount:${CLOUDBUILD} \
+  --role roles/secretmanager.secretAccessor
+Updated IAM policy for secret [application_settings].
+bindings:
+- members:
+  - serviceAccount:15752031030-compute@developer.gserviceaccount.com
+  - serviceAccount:15752031030@cloudbuild.gserviceaccount.com
+  role: roles/secretmanager.secretAccessor
+etag: BwX_-sMXUbc=
+version: 1
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ unzip -q workshop3.zip 
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ ls
+hello-google  hello-google.zip  README-cloudshell.txt  workshop3  workshop3.zip
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ rm workshop3.zip
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ ls
+hello-google  hello-google.zip  README-cloudshell.txt  workshop3
+ezhilpandiyan_saka@cloudshell:~ (week3-workshop-392213)$ cd workshop3/
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ ls
+manage.py  nc_tutorials  requirements.txt  static  tutorials  users
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ pwd
+/home/ezhilpandiyan_saka/workshop3
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ touch Dockerfile
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ cloudshell edit Dockerfile
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ cat Dockerfile
+# Use an official lightweight Python image.
+# https://hub.docker.com/_/python
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install dependencies.
+COPY requirements.txt .
+RUN pip install -U pip && pip install -r requirements.txt
+
+# Copy local code to the container image.
+COPY . .
+
+# Service must listen to $PORT environment variable.
+# This default value facilitates local development.
+ENV PORT 8080
+
+# Setting this ensures print statements and log messages
+# promptly appear in Cloud Logging.
+ENV PYTHONUNBUFFERED TRUE
+
+# Run the web service on container startup. Here we use the gunicorn
+# webserver, with one worker process and 8 threads.
+# For environments with multiple CPU cores, increase the number of workers
+# to be equal to the cores available.
+CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 nc_tutorials.wsgi:applicationezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ 
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud artifacts repositories create $REPO: --location $REGION --repository-format docker
+ERROR: (gcloud.artifacts.repositories.create) Names may only contain lowercase letters, numbers, and hyphens, and must begin with a letter and end with a letter or number.
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud artifacts repositories create $REPO --location $REGION --repository-format docker
+Create request issued for: [workshop3-repo]
+Waiting for operation [projects/week3-workshop-392213/locations/us-central1/operations/110a55a7-ec92-41ba-989d-c01d6191bb67] to complete...done.                                                                                                
+Created repository [workshop3-repo].
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud artifacts repositories list
+Listing items under project week3-workshop-392213, across all locations.
+
+ARTIFACT_REGISTRY
+
+REPOSITORY: workshop3-repo
+FORMAT: DOCKER
+MODE: STANDARD_REPOSITORY
+DESCRIPTION: 
+LOCATION: us-central1
+LABELS: 
+ENCRYPTION: Google-managed key
+CREATE_TIME: 2023-07-08T14:53:10
+UPDATE_TIME: 2023-07-08T14:53:10
+SIZE (MB): 0
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ IMAGE_LOCATION=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ echo $IMAGE_LOCATION
+us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ pwd
+/home/ezhilpandiyan_saka/workshop3
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ ls
+Dockerfile  manage.py  nc_tutorials  requirements.txt  static  tutorials  users
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud builds submit --tag ${IMAGE_LOCATION}
+Creating temporary tarball archive of 65 file(s) totalling 1.5 MiB before compression.
+Uploading tarball of [.] to [gs://week3-workshop-392213_cloudbuild/source/1688828168.154121-77fe1ecb82c84f619db374a81442bc51.tgz]
+Created [https://cloudbuild.googleapis.com/v1/projects/week3-workshop-392213/locations/global/builds/eb5cada0-dd4d-49ec-9916-96077b3adb04].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/eb5cada0-dd4d-49ec-9916-96077b3adb04?project=15752031030 ].
+-------------------------------------------------------------------------------------------------------------- REMOTE BUILD OUTPUT --------------------------------------------------------------------------------------------------------------
+starting build "eb5cada0-dd4d-49ec-9916-96077b3adb04"
+
+FETCHSOURCE
+Fetching storage object: gs://week3-workshop-392213_cloudbuild/source/1688828168.154121-77fe1ecb82c84f619db374a81442bc51.tgz#1688828169645919
+Copying gs://week3-workshop-392213_cloudbuild/source/1688828168.154121-77fe1ecb82c84f619db374a81442bc51.tgz#1688828169645919...
+/ [1 files][336.7 KiB/336.7 KiB]                                                
+Operation completed over 1 objects/336.7 KiB.
+BUILD
+Already have image (with digest): gcr.io/cloud-builders/docker
+Sending build context to Docker daemon  1.645MB
+Step 1/8 : FROM python:3.9-slim
+3.9-slim: Pulling from library/python
+faef57eae888: Pulling fs layer
+36578dff3c0f: Pulling fs layer
+dc5bc15716ac: Pulling fs layer
+f127de16bbdd: Pulling fs layer
+02fcdd01704c: Pulling fs layer
+f127de16bbdd: Waiting
+02fcdd01704c: Waiting
+36578dff3c0f: Verifying Checksum
+36578dff3c0f: Download complete
+f127de16bbdd: Verifying Checksum
+f127de16bbdd: Download complete
+faef57eae888: Verifying Checksum
+faef57eae888: Download complete
+02fcdd01704c: Verifying Checksum
+02fcdd01704c: Download complete
+dc5bc15716ac: Verifying Checksum
+dc5bc15716ac: Download complete
+faef57eae888: Pull complete
+36578dff3c0f: Pull complete
+dc5bc15716ac: Pull complete
+f127de16bbdd: Pull complete
+02fcdd01704c: Pull complete
+Digest: sha256:1981920906ec577fb1a83bffca080ad659692688e80aee4cfe58d4642ac108e8
+Status: Downloaded newer image for python:3.9-slim
+ ba55b0c3bfaa
+Step 2/8 : WORKDIR /app
+ Running in c05778d9e9c0
+Removing intermediate container c05778d9e9c0
+ 2b041691a266
+Step 3/8 : COPY requirements.txt .
+ 0a6f44c97ede
+Step 4/8 : RUN pip install -U pip && pip install -r requirements.txt
+ Running in 0986c9cbd215
+Requirement already satisfied: pip in /usr/local/lib/python3.9/site-packages (23.0.1)
+Collecting pip
+  Downloading pip-23.1.2-py3-none-any.whl (2.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 34.7 MB/s eta 0:00:00
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 23.0.1
+    Uninstalling pip-23.0.1:
+      Successfully uninstalled pip-23.0.1
+Successfully installed pip-23.1.2
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+Collecting django==3.2.2 (from -r requirements.txt (line 1))
+  Downloading Django-3.2.2-py3-none-any.whl (7.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.9/7.9 MB 36.2 MB/s eta 0:00:00
+Collecting gunicorn==20.1.0 (from -r requirements.txt (line 2))
+  Downloading gunicorn-20.1.0-py3-none-any.whl (79 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 79.5/79.5 kB 12.3 MB/s eta 0:00:00
+Collecting djangorestframework==3.12.4 (from -r requirements.txt (line 3))
+  Downloading djangorestframework-3.12.4-py3-none-any.whl (957 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 957.7/957.7 kB 51.6 MB/s eta 0:00:00
+Collecting psycopg2-binary==2.9.2 (from -r requirements.txt (line 4))
+  Downloading psycopg2_binary-2.9.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 68.3 MB/s eta 0:00:00
+Collecting django-storages[google]==1.12.3 (from -r requirements.txt (line 5))
+  Downloading django_storages-1.12.3-py3-none-any.whl (44 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.0/45.0 kB 6.8 MB/s eta 0:00:00
+Collecting django-environ==0.8.1 (from -r requirements.txt (line 6))
+  Downloading django_environ-0.8.1-py2.py3-none-any.whl (17 kB)
+Collecting google-cloud-secret-manager==2.8.0 (from -r requirements.txt (line 7))
+  Downloading google_cloud_secret_manager-2.8.0-py2.py3-none-any.whl (94 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 94.8/94.8 kB 14.0 MB/s eta 0:00:00
+Collecting google-auth==2.3.3 (from -r requirements.txt (line 8))
+  Downloading google_auth-2.3.3-py2.py3-none-any.whl (155 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 155.5/155.5 kB 23.4 MB/s eta 0:00:00
+Collecting asgiref<4,>=3.3.2 (from django==3.2.2->-r requirements.txt (line 1))
+  Downloading asgiref-3.7.2-py3-none-any.whl (24 kB)
+Collecting pytz (from django==3.2.2->-r requirements.txt (line 1))
+  Downloading pytz-2023.3-py2.py3-none-any.whl (502 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 502.3/502.3 kB 43.6 MB/s eta 0:00:00
+Collecting sqlparse>=0.2.2 (from django==3.2.2->-r requirements.txt (line 1))
+  Downloading sqlparse-0.4.4-py3-none-any.whl (41 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 41.2/41.2 kB 6.5 MB/s eta 0:00:00
+Requirement already satisfied: setuptools>=3.0 in /usr/local/lib/python3.9/site-packages (from gunicorn==20.1.0->-r requirements.txt (line 2)) (58.1.0)
+Collecting google-cloud-storage>=1.27.0 (from django-storages[google]==1.12.3->-r requirements.txt (line 5))
+  Downloading google_cloud_storage-2.10.0-py2.py3-none-any.whl (114 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 114.6/114.6 kB 17.2 MB/s eta 0:00:00
+Collecting google-api-core[grpc]<3.0.0dev,>=1.28.0 (from google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading google_api_core-2.11.1-py3-none-any.whl (120 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 120.5/120.5 kB 17.9 MB/s eta 0:00:00
+Collecting grpc-google-iam-v1<0.13dev,>=0.12.3 (from google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading grpc_google_iam_v1-0.12.6-py2.py3-none-any.whl (26 kB)
+Collecting proto-plus>=1.4.0 (from google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading proto_plus-1.22.3-py3-none-any.whl (48 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 48.1/48.1 kB 7.8 MB/s eta 0:00:00
+Collecting libcst>=0.2.5 (from google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading libcst-1.0.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 61.2 MB/s eta 0:00:00
+Collecting cachetools<5.0,>=2.0.0 (from google-auth==2.3.3->-r requirements.txt (line 8))
+  Downloading cachetools-4.2.4-py3-none-any.whl (10 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth==2.3.3->-r requirements.txt (line 8))
+  Downloading pyasn1_modules-0.3.0-py2.py3-none-any.whl (181 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 181.3/181.3 kB 25.8 MB/s eta 0:00:00
+Collecting six>=1.9.0 (from google-auth==2.3.3->-r requirements.txt (line 8))
+  Downloading six-1.16.0-py2.py3-none-any.whl (11 kB)
+Collecting rsa<5,>=3.1.4 (from google-auth==2.3.3->-r requirements.txt (line 8))
+  Downloading rsa-4.9-py3-none-any.whl (34 kB)
+Collecting typing-extensions>=4 (from asgiref<4,>=3.3.2->django==3.2.2->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.7.1-py3-none-any.whl (33 kB)
+Collecting googleapis-common-protos<2.0.dev0,>=1.56.2 (from google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading googleapis_common_protos-1.59.1-py2.py3-none-any.whl (224 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 224.5/224.5 kB 28.1 MB/s eta 0:00:00
+Collecting protobuf!=3.20.0,!=3.20.1,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0.dev0,>=3.19.5 (from google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading protobuf-4.23.4-cp37-abi3-manylinux2014_x86_64.whl (304 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 304.5/304.5 kB 32.2 MB/s eta 0:00:00
+INFO: pip is looking at multiple versions of google-api-core[grpc] to determine which version is compatible with other requirements. This could take a while.
+Collecting google-api-core[grpc]<3.0.0dev,>=1.28.0 (from google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading google_api_core-2.11.0-py3-none-any.whl (120 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 120.3/120.3 kB 18.5 MB/s eta 0:00:00
+  Downloading google_api_core-2.10.2-py3-none-any.whl (115 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 115.6/115.6 kB 19.4 MB/s eta 0:00:00
+Collecting requests<3.0.0dev,>=2.18.0 (from google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading requests-2.31.0-py3-none-any.whl (62 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.6/62.6 kB 10.3 MB/s eta 0:00:00
+Collecting grpcio<2.0dev,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading grpcio-1.56.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.2/5.2 MB 46.9 MB/s eta 0:00:00
+Collecting grpcio-status<2.0dev,>=1.33.2 (from google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading grpcio_status-1.56.0-py3-none-any.whl (5.1 kB)
+Collecting google-cloud-core<3.0dev,>=2.3.0 (from google-cloud-storage>=1.27.0->django-storages[google]==1.12.3->-r requirements.txt (line 5))
+  Downloading google_cloud_core-2.3.3-py2.py3-none-any.whl (29 kB)
+Collecting google-resumable-media>=2.3.2 (from google-cloud-storage>=1.27.0->django-storages[google]==1.12.3->-r requirements.txt (line 5))
+  Downloading google_resumable_media-2.5.0-py2.py3-none-any.whl (77 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 77.7/77.7 kB 12.2 MB/s eta 0:00:00
+Collecting typing-inspect>=0.4.0 (from libcst>=0.2.5->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading typing_inspect-0.9.0-py3-none-any.whl (8.8 kB)
+Collecting pyyaml>=5.2 (from libcst>=0.2.5->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading PyYAML-6.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl (661 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 661.8/661.8 kB 48.6 MB/s eta 0:00:00
+Collecting pyasn1<0.6.0,>=0.4.6 (from pyasn1-modules>=0.2.1->google-auth==2.3.3->-r requirements.txt (line 8))
+  Downloading pyasn1-0.5.0-py2.py3-none-any.whl (83 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 83.9/83.9 kB 13.3 MB/s eta 0:00:00
+Collecting google-crc32c<2.0dev,>=1.0 (from google-resumable-media>=2.3.2->google-cloud-storage>=1.27.0->django-storages[google]==1.12.3->-r requirements.txt (line 5))
+  Downloading google_crc32c-1.5.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (32 kB)
+Collecting charset-normalizer<4,>=2 (from requests<3.0.0dev,>=2.18.0->google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading charset_normalizer-3.2.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (202 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 202.1/202.1 kB 26.4 MB/s eta 0:00:00
+Collecting idna<4,>=2.5 (from requests<3.0.0dev,>=2.18.0->google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading idna-3.4-py3-none-any.whl (61 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 61.5/61.5 kB 9.6 MB/s eta 0:00:00
+Collecting urllib3<3,>=1.21.1 (from requests<3.0.0dev,>=2.18.0->google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading urllib3-2.0.3-py3-none-any.whl (123 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 123.6/123.6 kB 17.4 MB/s eta 0:00:00
+Collecting certifi>=2017.4.17 (from requests<3.0.0dev,>=2.18.0->google-api-core[grpc]<3.0.0dev,>=1.28.0->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading certifi-2023.5.7-py3-none-any.whl (156 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 157.0/157.0 kB 23.7 MB/s eta 0:00:00
+Collecting mypy-extensions>=0.3.0 (from typing-inspect>=0.4.0->libcst>=0.2.5->google-cloud-secret-manager==2.8.0->-r requirements.txt (line 7))
+  Downloading mypy_extensions-1.0.0-py3-none-any.whl (4.7 kB)
+Installing collected packages: pytz, urllib3, typing-extensions, sqlparse, six, pyyaml, pyasn1, psycopg2-binary, protobuf, mypy-extensions, idna, gunicorn, grpcio, google-crc32c, django-environ, charset-normalizer, certifi, cachetools, typing-inspect, rsa, requests, pyasn1-modules, proto-plus, googleapis-common-protos, google-resumable-media, asgiref, libcst, grpcio-status, google-auth, django, grpc-google-iam-v1, google-api-core, djangorestframework, django-storages, google-cloud-core, google-cloud-storage, google-cloud-secret-manager
+Successfully installed asgiref-3.7.2 cachetools-4.2.4 certifi-2023.5.7 charset-normalizer-3.2.0 django-3.2.2 django-environ-0.8.1 django-storages-1.12.3 djangorestframework-3.12.4 google-api-core-2.10.2 google-auth-2.3.3 google-cloud-core-2.3.3 google-cloud-secret-manager-2.8.0 google-cloud-storage-2.10.0 google-crc32c-1.5.0 google-resumable-media-2.5.0 googleapis-common-protos-1.59.1 grpc-google-iam-v1-0.12.6 grpcio-1.56.0 grpcio-status-1.56.0 gunicorn-20.1.0 idna-3.4 libcst-1.0.1 mypy-extensions-1.0.0 proto-plus-1.22.3 protobuf-4.23.4 psycopg2-binary-2.9.2 pyasn1-0.5.0 pyasn1-modules-0.3.0 pytz-2023.3 pyyaml-6.0 requests-2.31.0 rsa-4.9 six-1.16.0 sqlparse-0.4.4 typing-extensions-4.7.1 typing-inspect-0.9.0 urllib3-2.0.3
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+Removing intermediate container 0986c9cbd215
+ 56ed80da4ae4
+Step 5/8 : COPY . .
+ 6705f8933c43
+Step 6/8 : ENV PORT 8080
+ Running in c53f84bad883
+Removing intermediate container c53f84bad883
+ c5f4cbc00df5
+Step 7/8 : ENV PYTHONUNBUFFERED TRUE
+ Running in 786e8f7e4629
+Removing intermediate container 786e8f7e4629
+ f6a346cf8213
+Step 8/8 : CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 nc_tutorials.wsgi:application
+ Running in 954bbe919342
+Removing intermediate container 954bbe919342
+ 19fd963cf2fb
+Successfully built 19fd963cf2fb
+Successfully tagged us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3:latest
+PUSH
+Pushing us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3
+The push refers to repository [us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3]
+bcfc22e629fa: Preparing
+dbfc6deb7829: Preparing
+891a37582d12: Preparing
+0987a5794510: Preparing
+e19aa20e7615: Preparing
+a72700e17cae: Preparing
+76d3797b9b0f: Preparing
+2e4e72005dce: Preparing
+24839d45ca45: Preparing
+a72700e17cae: Waiting
+76d3797b9b0f: Waiting
+2e4e72005dce: Waiting
+24839d45ca45: Waiting
+bcfc22e629fa: Pushed
+891a37582d12: Pushed
+0987a5794510: Pushed
+e19aa20e7615: Pushed
+a72700e17cae: Pushed
+2e4e72005dce: Pushed
+76d3797b9b0f: Pushed
+24839d45ca45: Pushed
+dbfc6deb7829: Pushed
+latest: digest: sha256:1a983c0a65b19ef92208d37346e95779c80f298fbacbe12a8972f10b456eec86 size: 2206
+DONE
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ID: eb5cada0-dd4d-49ec-9916-96077b3adb04
+CREATE_TIME: 2023-07-08T14:56:09+00:00
+DURATION: 1M1S
+SOURCE: gs://week3-workshop-392213_cloudbuild/source/1688828168.154121-77fe1ecb82c84f619db374a81442bc51.tgz
+IMAGES: us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3 (+1 more)
+STATUS: SUCCESS
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ SQL_SERVER=${PROJECT_ID}:${REGION}:${PGSERVER}
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ echo $SQL_SERVER
+week3-workshop-392213:us-central1:workshop3-postgres
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ touch cloudmigrate.yml
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ cloudshell edit cloudmigrate.yml 
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud builds submit --config cloudmigrate.yml \
+  --substitutions _IMAGE_LOCATION=$IMAGE_LOCATION,_SQL_SERVER=$SQL_SERVER
+Creating temporary tarball archive of 66 file(s) totalling 1.5 MiB before compression.
+Uploading tarball of [.] to [gs://week3-workshop-392213_cloudbuild/source/1688828488.982699-298112da0c954f7a859f50f31e911e2f.tgz]
+Created [https://cloudbuild.googleapis.com/v1/projects/week3-workshop-392213/locations/global/builds/c3b0deac-70c0-4387-bd1a-f1b304ec5ee7].
+Logs are available at [ https://console.cloud.google.com/cloud-build/builds/c3b0deac-70c0-4387-bd1a-f1b304ec5ee7?project=15752031030 ].
+-------------------------------------------------------------------------------------------------------------- REMOTE BUILD OUTPUT --------------------------------------------------------------------------------------------------------------
+starting build "c3b0deac-70c0-4387-bd1a-f1b304ec5ee7"
+
+FETCHSOURCE
+Fetching storage object: gs://week3-workshop-392213_cloudbuild/source/1688828488.982699-298112da0c954f7a859f50f31e911e2f.tgz#1688828489457090
+Copying gs://week3-workshop-392213_cloudbuild/source/1688828488.982699-298112da0c954f7a859f50f31e911e2f.tgz#1688828489457090...
+/ [1 files][336.8 KiB/336.8 KiB]                                                
+Operation completed over 1 objects/336.8 KiB.
+BUILD
+Starting Step #0
+Step #0: Pulling image: gcr.io/google-appengine/exec-wrapper
+Step #0: Using default tag: latest
+Step #0: latest: Pulling from google-appengine/exec-wrapper
+Step #0: 75f546e73d8b: Pulling fs layer
+Step #0: 0f3bb76fc390: Pulling fs layer
+Step #0: 3c2cba919283: Pulling fs layer
+Step #0: 734d89445d1a: Pulling fs layer
+Step #0: 284a58107ab9: Pulling fs layer
+Step #0: c69c0c47df52: Pulling fs layer
+Step #0: 734d89445d1a: Waiting
+Step #0: 284a58107ab9: Waiting
+Step #0: c69c0c47df52: Waiting
+Step #0: 3c2cba919283: Verifying Checksum
+Step #0: 3c2cba919283: Download complete
+Step #0: 0f3bb76fc390: Verifying Checksum
+Step #0: 0f3bb76fc390: Download complete
+Step #0: 284a58107ab9: Verifying Checksum
+Step #0: 284a58107ab9: Download complete
+Step #0: c69c0c47df52: Verifying Checksum
+Step #0: c69c0c47df52: Download complete
+Step #0: 75f546e73d8b: Download complete
+Step #0: 75f546e73d8b: Pull complete
+Step #0: 734d89445d1a: Verifying Checksum
+Step #0: 734d89445d1a: Download complete
+Step #0: 0f3bb76fc390: Pull complete
+Step #0: 3c2cba919283: Pull complete
+Step #0: 734d89445d1a: Pull complete
+Step #0: 284a58107ab9: Pull complete
+Step #0: c69c0c47df52: Pull complete
+Step #0: Digest: sha256:1b5b5a8805b247e9d08f01bc5e34522d6c57606d050c3b9ad4c6cf0a3a10cf06
+Step #0: Status: Downloaded newer image for gcr.io/google-appengine/exec-wrapper:latest
+Step #0: gcr.io/google-appengine/exec-wrapper:latest
+Step #0: 
+Step #0: ---------- INSTALL IMAGE ----------
+Step #0: Using default tag: latest
+Step #0: latest: Pulling from week3-workshop-392213/workshop3-repo/workshop3
+Step #0: faef57eae888: Pulling fs layer
+Step #0: 36578dff3c0f: Pulling fs layer
+Step #0: dc5bc15716ac: Pulling fs layer
+Step #0: f127de16bbdd: Pulling fs layer
+Step #0: 02fcdd01704c: Pulling fs layer
+Step #0: abfad3796e94: Pulling fs layer
+Step #0: 850c41364393: Pulling fs layer
+Step #0: 74d5cd825291: Pulling fs layer
+Step #0: fa693f3f1b3b: Pulling fs layer
+Step #0: f127de16bbdd: Waiting
+Step #0: 02fcdd01704c: Waiting
+Step #0: abfad3796e94: Waiting
+Step #0: 850c41364393: Waiting
+Step #0: 74d5cd825291: Waiting
+Step #0: fa693f3f1b3b: Waiting
+Step #0: 36578dff3c0f: Verifying Checksum
+Step #0: 36578dff3c0f: Download complete
+Step #0: faef57eae888: Verifying Checksum
+Step #0: faef57eae888: Download complete
+Step #0: f127de16bbdd: Download complete
+Step #0: dc5bc15716ac: Verifying Checksum
+Step #0: dc5bc15716ac: Download complete
+Step #0: 850c41364393: Verifying Checksum
+Step #0: 850c41364393: Download complete
+Step #0: abfad3796e94: Download complete
+Step #0: fa693f3f1b3b: Verifying Checksum
+Step #0: fa693f3f1b3b: Download complete
+Step #0: 02fcdd01704c: Verifying Checksum
+Step #0: 02fcdd01704c: Download complete
+Step #0: faef57eae888: Pull complete
+Step #0: 74d5cd825291: Verifying Checksum
+Step #0: 74d5cd825291: Download complete
+Step #0: 36578dff3c0f: Pull complete
+Step #0: dc5bc15716ac: Pull complete
+Step #0: f127de16bbdd: Pull complete
+Step #0: 02fcdd01704c: Pull complete
+Step #0: abfad3796e94: Pull complete
+Step #0: 850c41364393: Pull complete
+Step #0: 74d5cd825291: Pull complete
+Step #0: fa693f3f1b3b: Pull complete
+Step #0: Digest: sha256:1a983c0a65b19ef92208d37346e95779c80f298fbacbe12a8972f10b456eec86
+Step #0: Status: Downloaded newer image for us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3:latest
+Step #0: us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3:latest
+Step #0: 
+Step #0: ---------- CONNECT CLOUDSQL ----------
+Step #0: cloud_sql_proxy is running.
+Step #0: Connections: week3-workshop-392213:us-central1:workshop3-postgres.
+Step #0: 
+Step #0: ---------- EXECUTE COMMAND ----------
+Step #0: python manage.py migrate
+Step #0: Operations to perform:
+Step #0:   Apply all migrations: admin, auth, contenttypes, sessions, tutorials
+Step #0: Running migrations:
+Step #0:   Applying contenttypes.0001_initial... OK
+Step #0:   Applying auth.0001_initial... OK
+Step #0:   Applying admin.0001_initial... OK
+Step #0:   Applying admin.0002_logentry_remove_auto_add... OK
+Step #0:   Applying admin.0003_logentry_add_action_flag_choices... OK
+Step #0:   Applying contenttypes.0002_remove_content_type_name... OK
+Step #0:   Applying auth.0002_alter_permission_name_max_length... OK
+Step #0:   Applying auth.0003_alter_user_email_max_length... OK
+Step #0:   Applying auth.0004_alter_user_username_opts... OK
+Step #0:   Applying auth.0005_alter_user_last_login_null... OK
+Step #0:   Applying auth.0006_require_contenttypes_0002... OK
+Step #0:   Applying auth.0007_alter_validators_add_error_messages... OK
+Step #0:   Applying auth.0008_alter_user_username_max_length... OK
+Step #0:   Applying auth.0009_alter_user_last_name_max_length... OK
+Step #0:   Applying auth.0010_alter_group_name_max_length... OK
+Step #0:   Applying auth.0011_update_proxy_permissions... OK
+Step #0:   Applying auth.0012_alter_user_first_name_max_length... OK
+Step #0:   Applying sessions.0001_initial... OK
+Step #0:   Applying tutorials.0001_initial... OK
+Step #0: 
+Step #0: ---------- CLEANUP ----------
+Finished Step #0
+Starting Step #1
+Step #1: Already have image (with digest): gcr.io/google-appengine/exec-wrapper
+Step #1: 
+Step #1: ---------- INSTALL IMAGE ----------
+Step #1: Using default tag: latest
+Step #1: latest: Pulling from week3-workshop-392213/workshop3-repo/workshop3
+Step #1: Digest: sha256:1a983c0a65b19ef92208d37346e95779c80f298fbacbe12a8972f10b456eec86
+Step #1: Status: Image is up to date for us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3:latest
+Step #1: us-central1-docker.pkg.dev/week3-workshop-392213/workshop3-repo/workshop3:latest
+Step #1: 
+Step #1: ---------- CONNECT CLOUDSQL ----------
+Step #1: cloud_sql_proxy is running.
+Step #1: Connections: week3-workshop-392213:us-central1:workshop3-postgres.
+Step #1: 
+Step #1: ---------- EXECUTE COMMAND ----------
+Step #1: python manage.py collectstatic --no-input
+Step #1: 
+Step #1: 156 static files copied.
+Step #1: 
+Step #1: ---------- CLEANUP ----------
+Finished Step #1
+PUSH
+DONE
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ID: c3b0deac-70c0-4387-bd1a-f1b304ec5ee7
+CREATE_TIME: 2023-07-08T15:01:29+00:00
+DURATION: 1M32S
+SOURCE: gs://week3-workshop-392213_cloudbuild/source/1688828488.982699-298112da0c954f7a859f50f31e911e2f.tgz
+IMAGES: -
+STATUS: SUCCESS
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ gcloud run deploy $IMAGE \
+  --platform managed \
+  --region $REGION \
+  --image $IMAGE_LOCATION \
+  --set-cloudsql-instances $SQL_SERVER \
+  --allow-unauthenticated
+Deploying container to Cloud Run service [workshop3] in project [week3-workshop-392213] region [us-central1]
+OK Deploying new service... Done.                                                                                                                                                                                                               
+  OK Creating Revision...                                                                                                                                                                                                                       
+  OK Routing traffic...                                                                                                                                                                                                                         
+  OK Setting IAM Policy...                                                                                                                                                                                                                      
+Done.                                                                                                                                                                                                                                           
+Service [workshop3] revision [workshop3-00001-qik] has been deployed and is serving 100 percent of traffic.
+Service URL: https://workshop3-oqlfvodyaq-uc.a.run.app
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ cloudshell edit Dockerfile 
+ezhilpandiyan_saka@cloudshell:~/workshop3 (week3-workshop-392213)$ 
